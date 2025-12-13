@@ -20,8 +20,6 @@ Plot beta estimates using PDFs
 }
 \examples{
 data("Hm")
-lut_gensp <- colnames(Hm$Y) |> str_replace_all("introduced_annual_forb", "other IAF") |> str_replace_all('Alyssum desertorum', 'test' )
-names(lut_gensp) <- colnames(Hm$Y)
-gghm_beta2(Hm, lut_gensp = lut_spp)
+gghm_beta2(Hm)
 
 }

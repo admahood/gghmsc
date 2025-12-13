@@ -143,7 +143,7 @@ gghm_ess <- function(Hm,
     }
 
     d <- d |>
-      bind_rows(
+      dplyr::bind_rows(
         coda::effectiveSize(tmp) |>
           tibble::as_tibble() |>
           dplyr::mutate(fit_statistic = "ess", variable = "omega"))
@@ -182,7 +182,7 @@ gghm_vp <- function(Hm,
   prevalence <- colSums(Hm$Y) |>
     tibble::as_tibble(rownames = "Species") |>
     dplyr::rename(prevalence = value) |>
-    dplyr::arrange(desc(prevalence))
+    dplyr::arrange(dplyr::desc(prevalence))
 
   mf_df <- data.frame(Species = colnames(Hm$Y)) |>
     dplyr::left_join(prevalence)
@@ -366,9 +366,7 @@ gghm_beta <- function(Hm,
 #'
 #' @examples
 #' data("Hm")
-#' lut_gensp <- colnames(Hm$Y) |> str_replace_all("introduced_annual_forb", "other IAF") |> str_replace_all('Alyssum desertorum', 'test' )
-#' names(lut_gensp) <- colnames(Hm$Y)
-#' gghm_beta2(Hm, lut_gensp = lut_spp)
+#' gghm_beta2(Hm)
 #'
 #' @export
 gghm_beta2 <- function(Hm, order_var = 'prevalence',
@@ -416,7 +414,9 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
         dplyr::select(-Parameter)
       cc <- cc + 1
     }}
-  pd <- result |> dplyr::bind_rows() |> tibble::as_tibble() |>
+  pd <- result |>
+    dplyr::bind_rows() |>
+    tibble::as_tibble() |>
     dplyr::mutate(p_equiv = dplyr::case_when(
       pd <= 0.95 ~ 'ns',
       pd > 0.95 & pd <= 0.975 ~ '0.1',
@@ -454,7 +454,8 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
 
 
   mbc <- mbc0 |>
-    dplyr::left_join(Hm$TrData |> tibble::as_tibble(rownames = "sp")) |>
+    dplyr::left_join(Hm$TrData |>
+                       tibble::as_tibble(rownames = "sp")) |>
     dplyr::left_join(pd)
 
   if(any(!is.na(lut_gensp))){
@@ -585,6 +586,7 @@ gghm_gamma <- function(Hm,
                          no_intercept = TRUE,
                          title = "Effects on Traits"){
   requireNamespace('magrittr')
+  requireNamespace('BayestestR')
   requireNamespace('stringr')
   requireNamespace('Hmsc')
   requireNamespace('dplyr')
@@ -718,6 +720,8 @@ gghm_omega <- function(Hm,
                          axis_text_colors_y = "black",
                          title = "Residual Species Associations"){
   requireNamespace("ggcorrplot")
+  requireNamespace("ggplot2")
+
   OmegaCor = Hmsc::computeAssociations(Hm)
 
   hmdf_mean <- OmegaCor[[1]]$mean |>
