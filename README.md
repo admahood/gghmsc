@@ -6,3 +6,11 @@
 
 # gghmsc
 ggplot functions for use with HMSC Joint Species Distribution Models
+
+## gghm_convergence
+
+`data('Hm')`
+
+`gghm_convergence(Hm)`
+
+![](images/gghm_convergence.png)

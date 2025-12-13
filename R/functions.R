@@ -20,13 +20,13 @@ gghm_convergence <- function(Hm,
   mpost <- Hmsc::convertToCodaObject(Hm)
 
   d <-
-    bind_rows(
+    dplyr::bind_rows(
       coda::effectiveSize(mpost$Beta) |>
         tibble::as_tibble() |>
         dplyr::mutate(fit_statistic = "ess", variable = "beta"),
       coda::gelman.diag(mpost$Beta, multivariate=FALSE)$psrf|>
-        as_tibble() |> dplyr::rename(value = `Point est.`) |>
-        mutate(variable = "beta", fit_statistic = "psrf")
+        tibble::as_tibble() |> dplyr::rename(value = `Point est.`) |>
+        dplyr::mutate(variable = "beta", fit_statistic = "psrf")
     )
 
   if(V) {
@@ -75,15 +75,15 @@ gghm_convergence <- function(Hm,
   if(!beta) d <- filter(d, variable != "beta")
 
   d <- d |>
-    mutate(variable = str_replace_all(variable, "beta", "Environmental Covariates") |>
-             str_replace_all('gamma', "Traits") |>
-             str_replace_all('omega', "Residual Correlations"))
+    dplyr::mutate(variable = stringr::str_replace_all(variable, "beta", "Environmental Covariates") |>
+                    stringr::str_replace_all('gamma', "Traits") |>
+                    stringr::str_replace_all('omega', "Residual Correlations"))
 
   ggplot2::ggplot(d, ggplot2::aes(x=value)) +
-    geom_histogram(bins=70) +
-    geom_vline(data = vline_df, ggplot2::aes(xintercept = xintercept), color="red", lty=2)+
-    facet_grid(variable~fit_statistic, scales='free') +
-    ggtitle(title)
+    ggplot2::geom_histogram(bins=70) +
+    ggplot2::geom_vline(data = vline_df, ggplot2::aes(xintercept = xintercept), color="red", lty=2)+
+    ggplot2::facet_grid(variable~fit_statistic, scales='free') +
+    ggplot2::ggtitle(title)
 
 }
 #' Trace plots
