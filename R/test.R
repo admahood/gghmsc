@@ -11,3 +11,10 @@
 #   geom_text(data = label_df, aes(x=x,y=y, label=label), angle =90)
 
 
+
+
+# load('/home/a/projects/lyb/data/hmsc/r1_hmsc_probit_burned_subplot_grp_Feb_20_1p5M.Rda')
+#
+# x <- gghm_beta_tests(mb)
+# x |> summary()
+#

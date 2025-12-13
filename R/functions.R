@@ -383,6 +383,7 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
   requireNamespace('tidyr')
   requireNamespace('tibble')
   requireNamespace('ggplot2')
+  requireNamespace('bayestestR')
   requireNamespace('ggnewscale')
   requireNamespace('ggmcmc')
   requireNamespace("stringr")
@@ -403,6 +404,26 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
     dplyr::filter(value<4 & value>-4) |>
     dplyr::ungroup()
 
+  result <-  list()
+  cc <- 1
+  for(i in unique(mbc0$var)){
+    for(j in unique(mbc0$sp)){
+      result[[cc]] <- mbc0 |>
+        dplyr::filter(var == i, sp == j) |>
+        dplyr::pull(value) |>
+        bayestestR::p_direction() |>
+        dplyr::mutate(var = i, sp=j) |>
+        dplyr::select(-Parameter)
+      cc <- cc + 1
+    }}
+  pd <- result |> dplyr::bind_rows() |> tibble::as_tibble() |>
+    dplyr::mutate(p_equiv = dplyr::case_when(
+      pd <= 0.95 ~ 'ns',
+      pd > 0.95 & pd <= 0.975 ~ '0.1',
+      pd > 0.975 & pd <= 0.995 ~ '0.05',
+      pd > 0.995 & pd <= 0.9995 ~ '0.01',
+      pd > 0.9995 ~ '0.001'
+    ))
 
 
 
@@ -433,7 +454,8 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
 
 
   mbc <- mbc0 |>
-    dplyr::left_join(Hm$TrData |> tibble::as_tibble(rownames = "sp"))
+    dplyr::left_join(Hm$TrData |> tibble::as_tibble(rownames = "sp")) |>
+    dplyr::left_join(pd)
 
   if(any(!is.na(lut_gensp))){
     mbc <- dplyr::mutate(mbc, sp = lut_gensp[sp])
@@ -474,19 +496,25 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
     dp <- dplyr::mutate(dp, var = lut_ivars[var])
   }
 
+  pcols <- c("ns" = "white",
+             '0.1' = 'grey40',
+             '0.05' = 'black',
+             '0.01' = 'black',
+             '0.001' = 'black')
 
   p <- ggplot2::ggplot(dp,
              ggplot2::aes(x=value, y = sp_f,
                   group=as.factor(Chain))) +
-    ggplot2::scale_color_manual(values = (c("white", "grey90")))+
+    # ggplot2::scale_color_manual(values = (c("white", "grey90")))+
     ggplot2::geom_hline(yintercept = n_native + 0.5) +
-    ggdist::stat_slab(height=2,  lwd = .5, #alpha = 0.95,
-                      color = "black",
-                     ggplot2::aes(fill = ggplot2::after_stat(x>0),
+    ggdist::stat_slab(height=2,  lwd = .75, #alpha = 0.95,
+                      # color = "black",
+                     ggplot2::aes(fill = ggplot2::after_stat(x>0), color = p_equiv,
                           alpha = exp(abs(median_value))))+
     ggplot2::facet_wrap(~var, scales = "free_x", nrow=1, ncol=length(unique(mbc$var))) +
-    ggplot2::scale_alpha_continuous(range = c(0,1.25*(1/length(unique(mbc$Chain)))))+
+    ggplot2::scale_alpha_continuous(range = c(0,2*(1/length(unique(mbc$Chain)))))+
     ggplot2::theme_classic() +
+    ggplot2::scale_color_manual(values = pcols) +
     ggplot2::guides(fill="none", alpha="none", color = "none")+
     ggplot2::geom_vline(xintercept=0, col="black", lty=2) +
     ggnewscale::new_scale_fill() +
@@ -498,6 +526,55 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
           axis.ticks.x = ggplot2::element_blank(),
           axis.text.y = ggplot2::element_text(size=12))#;p
   return(p)
+}
+
+#' Do tests on parameters
+#'
+#' @param Hm Hmsc object
+#' @param ci Credible interval
+#'
+#' @export
+gghm_beta_tests <- function(Hm, ci = 0.95){
+  requireNamespace('dplyr')
+  requireNamespace('tidyr')
+  requireNamespace('tibble')
+  requireNamespace('ggmcmc')
+  requireNamespace('bayestestR')
+  requireNamespace("stringr")
+
+  cc<-Hmsc::convertToCodaObject(Hm)
+  mbc0 <- ggmcmc::ggs(cc$Beta) |>
+    tidyr::separate(col = "Parameter",
+                    into = c("var", 'sp'),
+                    sep = ", ") |>
+    dplyr::mutate(var = stringr::str_remove_all(var, "B\\["),
+                  var = stringr::str_remove_all(var, " \\(C\\d+\\)"),
+                  sp = stringr::str_remove_all(sp, " \\(S\\d+\\)\\]"))|>
+    dplyr::filter(var != "(Intercept)") |>
+    dplyr::group_by(var, sp, Chain) |>
+    dplyr::mutate(value = scale(value,center = F),
+                  sign = ifelse(value>0, "positive", "negative"),
+                  median_value = median(value)) |>
+    dplyr::filter(value<4 & value>-4) |>
+    dplyr::ungroup()
+
+
+    result <-  list()
+    cc <- 1
+    for(i in unique(mbc0$var)){
+      for(j in unique(mbc0$sp)){
+        result[[cc]] <- mbc0 |>
+          dplyr::filter(var == i, sp == j) |>
+          dplyr::pull(value) |>
+          bayestestR::describe_posterior(ci = ci) |>
+          dplyr::mutate(var = i, sp=j)
+        result[[cc]][2,2] <- result[[cc]][1,2]
+        result[[cc]] <- filter(result[[cc]], Parameter == "Posterior") |>
+          dplyr::select(-Parameter)
+        cc <- cc + 1
+      }}
+    return(result |> bind_rows() |> as_tibble())
+
 }
 
 #' plot trait covariate relationships

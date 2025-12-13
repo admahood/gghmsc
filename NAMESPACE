@@ -2,11 +2,12 @@
 
 export(gghm_beta)
 export(gghm_beta2)
+export(gghm_beta_tests)
 export(gghm_convergence)
 export(gghm_ess)
-export(gghm_fit)
 export(gghm_gamma)
 export(gghm_gamma2)
 export(gghm_omega)
+export(gghm_r2_tjur)
 export(gghm_traceplot)
 export(gghm_vp)
