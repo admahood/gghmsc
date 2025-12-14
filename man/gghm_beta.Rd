@@ -19,9 +19,27 @@ gghm_beta(
 )
 }
 \arguments{
+\item{Hm}{an Hmsc model object}
+
 \item{order_x}{order the variables on the x axis}
 
 \item{grouping_var_y}{group the species on the Y axis by traits}
+
+\item{grouping_var_y_2}{second grouping variable}
+
+\item{n_gvy}{number of y axis grouping variables}
+
+\item{spp_exclude}{a vector of species names to exclude from the figure}
+
+\item{support_level}{the support level at which to make parameters visible (default = 0.89)}
+
+\item{lut_varnames}{a named vector (look up table) for changing the names of environmental covariates}
+
+\item{lut_sppnames}{a named vector (look up table) for changing the names of species}
+
+\item{no_intercept}{exclude the intercept parameters from the plot?}
+
+\item{title}{the plot title}
 }
 \description{
 Plot beta posterior estimates as colored boxes

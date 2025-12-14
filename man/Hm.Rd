@@ -5,9 +5,15 @@
 \alias{Hm}
 \title{An Hmsc object}
 \format{
-\subsection{'Hmsc object'}{
+\subsection{\code{Hm}}{
 
-An Hmsc object
+An Hmsc object. Basically a list.
+\describe{
+\item{XData}{data frame of environmental covariates}
+\item{Y}{data frame of species abundances or occurrences}
+\item{TrData}{data frame of trait data}
+...
+}
 }
 }
 \source{
@@ -17,6 +23,6 @@ An Hmsc object
 Hm
 }
 \description{
-Note: Some sites have more than one polygon. There are 59 polygons and 47 total sites.
+An Hmsc object
 }
 \keyword{datasets}

@@ -12,6 +12,17 @@ gghm_vp(
   lut_sppnames = NULL
 )
 }
+\arguments{
+\item{Hm}{an Hmsc model object}
+
+\item{title}{the title of the plot}
+
+\item{cols}{a vector of colors}
+
+\item{lut_varnames}{a named vector (look up table) for changing the names of variables. Useful for making things more presentable for publication.}
+
+\item{lut_sppnames}{a named vector (look up table) for changing the names of species}
+}
 \description{
 Plot variance partitioning
 }

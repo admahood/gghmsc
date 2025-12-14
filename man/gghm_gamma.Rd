@@ -11,6 +11,15 @@ gghm_gamma(
   title = "Effects on Traits"
 )
 }
+\arguments{
+\item{Hm}{an Hmsc object}
+
+\item{support_level}{make the boxes dissappear below this number}
+
+\item{no_intercept}{exclude the intercept?}
+
+\item{title}{plot title}
+}
 \description{
 plot trait covariate relationships
 }

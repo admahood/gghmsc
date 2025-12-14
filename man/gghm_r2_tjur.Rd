@@ -7,7 +7,11 @@
 gghm_r2_tjur(Hm, title = "Variance Explained", sp_names = "none")
 }
 \arguments{
-\item{which}{either all, r2 or named. all is a histogram with R2 and RSME. r2 is just R2. named is bar plot each species named on the  y axis.}
+\item{Hm}{an Hmsc model object}
+
+\item{title}{the plot title}
+
+\item{sp_names}{look up table to change species names to be more presentable}
 }
 \description{
 get Tjur R2 for each species

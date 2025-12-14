@@ -1,10 +1,11 @@
 #' Plot model convergence indexes
 #'
-#' @param beta if TRUE, plots the beta (env. filters) parameters
-#' @param V if TRUE, plots the V parameters
-#' @param gamma if TRUE, plots the gamma (traits) paramters
-#' @param omega if TRUE, plots the omega (spp associations) parameters
-#' @param title character string to customize
+#' @param Hm an Hmsc model object
+#' @param beta if TRUE, plots the beta parameters (environmental covariates).
+#' @param V if TRUE, plots the V parameters.
+#' @param gamma if TRUE, plots the gamma parameters (traits).
+#' @param omega if TRUE, plots the omega parameters (spp associations).
+#' @param title character string.
 #' @export
 gghm_convergence <- function(Hm,
                                beta = TRUE,
@@ -72,7 +73,7 @@ gghm_convergence <- function(Hm,
   vline_df <- data.frame(fit_statistic = c("ess", "psrf"),
                          xintercept = c(length(mpost$Beta)*nrow(mpost$Beta[[1]]),
                                         1.01))
-  if(!beta) d <- filter(d, variable != "beta")
+  if(!beta) d <- dplyr::filter(d, variable != "beta")
 
   d <- d |>
     dplyr::mutate(variable = stringr::str_replace_all(variable, "beta", "Environmental Covariates") |>
@@ -103,6 +104,12 @@ gghm_traceplot <- function(Hm,
 
 #' Plot effective sample size
 #'
+#' @param Hm an Hmsc model object
+#' @param beta if TRUE, plots the beta parameters (environmental covariates).
+#' @param V if TRUE, plots the V parameters.
+#' @param gamma if TRUE, plots the gamma parameters (traits).
+#' @param omega if TRUE, plots the omega parameters (spp associations).
+#' @param title character string.
 #' @export
 gghm_ess <- function(Hm,
                        beta = TRUE,
@@ -163,8 +170,11 @@ gghm_ess <- function(Hm,
 }
 
 #' Plot variance partitioning
-#'
-#'
+#' @param Hm an Hmsc model object
+#' @param title the title of the plot
+#' @param cols a vector of colors
+#' @param lut_varnames a named vector (look up table) for changing the names of variables. Useful for making things more presentable for publication.
+#' @param lut_sppnames a named vector (look up table) for changing the names of species
 #' @export
 gghm_vp <- function(Hm,
                       title = "Variance Explained",
@@ -193,7 +203,7 @@ gghm_vp <- function(Hm,
                  names_to = "Species",
                  values_to = "value") |>
     dplyr::left_join(prevalence) |>
-    na.omit()
+    stats::na.omit()
 
   if(is.vector(lut_varnames)) vp_df <- vp_df |> dplyr::mutate(variable = lut_varnames[variable])
   if(is.vector(lut_sppnames)) vp_df <- vp_df |> dplyr::mutate(Speices = lut_varnames[Species])
@@ -239,9 +249,17 @@ gghm_vp <- function(Hm,
 
 #' Plot beta posterior estimates as colored boxes
 #'
+#' @param Hm an Hmsc model object
 #' @param order_x order the variables on the x axis
 #' @param grouping_var_y group the species on the Y axis by traits
-#'
+#' @param grouping_var_y_2 second grouping variable
+#' @param n_gvy number of y axis grouping variables
+#' @param spp_exclude a vector of species names to exclude from the figure
+#' @param support_level the support level at which to make parameters visible (default = 0.89)
+#' @param lut_varnames a named vector (look up table) for changing the names of environmental covariates
+#' @param lut_sppnames a named vector (look up table) for changing the names of species
+#' @param no_intercept exclude the intercept parameters from the plot?
+#' @param title the plot title
 #'
 #' @export
 gghm_beta <- function(Hm,
@@ -294,31 +312,38 @@ gghm_beta <- function(Hm,
     dplyr::left_join(means, by = c("env_var", "Species"))|>
     dplyr::mutate(sign = ifelse(Mean>0, "+", "-"))
 
-  sp_sorted <- colSums(Hm$Y) |>
-    tibble::as_tibble(rownames = "Species") |>
+  # calculating prevalence if it's abundance, need to reclassify
+  Ypa <- Hm$Y
+  Ypa[Ypa > 0] <- 1
+  sp_sorted <- Ypa |>
+    colSums() |>
+    tibble::as_tibble(rownames = "species") |>
     dplyr::rename(prevalence = value) |>
     dplyr::arrange(prevalence) |>
-    dplyr::pull(Species)
+    dplyr::pull(species)
 
+  # grouping the y axis by a variable
   if(!is.na(grouping_var_y[1])){
     if(n_gvy == 1){
     sp_sorted <- Hm$TrData |>
       tibble::as_tibble(rownames = "species") |>
       dplyr::arrange(grouping_var_y) |>
-      dplyr::pull(species)}else{
-        sp_sorted <- Hm$TrData |>
-          tibble::as_tibble(rownames = "species") |>
-          dplyr::arrange(grouping_var_y, grouping_var_y_2) |>
-          dplyr::pull(species)
+      dplyr::pull(species)
+    }else{
+    sp_sorted <- Hm$TrData |>
+      tibble::as_tibble(rownames = "species") |>
+      dplyr::arrange(grouping_var_y, grouping_var_y_2) |>
+      dplyr::pull(species)
       }
   }
 
-  vp_order <-   colSums(Hm$Y) |>
-    tibble::as_tibble(rownames = "Species") |>
+  vp_order <-   Ypa |>
+    colSums() |>
+    tibble::as_tibble(rownames = "species") |>
     dplyr::rename(prevalence = value) |>
     dplyr::arrange(prevalence) |>
-    dplyr::mutate(Species_f = factor(Species, levels = sp_sorted)) |>
-    dplyr::filter(Species %in% supported$Species)
+    dplyr::mutate(species_f = factor(species, levels = sp_sorted)) |>
+    dplyr::filter(species %in% supported$species)
 
 
   supported <- supported |>
@@ -340,9 +365,10 @@ gghm_beta <- function(Hm,
   if(is.vector(lut_varnames)) supported <- supported |> dplyr::mutate(env_var = lut_varnames[env_var])
   if(is.vector(lut_sppnames)) supported <- supported |> dplyr::mutate(Species = lut_varnames[Species])
   if(no_intercept) supported <- supported |> dplyr::filter(env_var != "(Intercept)")
-  if(class(spp_exclude) == "character") supported <- dplyr::filter(supported, !Species %in% spp_exclude)
+  if(!all(is.na(spp_exclude))) supported <- dplyr::filter(supported, !Species %in% spp_exclude)
+
   p_beta <- supported |>
-    ggplot2::ggplot(ggplot2::aes(x=env_var,y=reorder(Species_f,Species))) +
+    ggplot2::ggplot(ggplot2::aes(x=env_var,y=stats::reorder(Species_f,Species))) +
     ggplot2::geom_tile(lwd=.5,ggplot2::aes(fill = Mean, color = sign)) +
     ggplot2::theme_classic()+
     ggplot2::scale_fill_steps2() +
@@ -363,21 +389,30 @@ gghm_beta <- function(Hm,
 }
 
 #' Plot beta estimates using PDFs
-#'
+#' @param Hm an Hmsc model object
+#' @param order_var order the variables on the y axis with this trait variable
+#' @param grouping_var_y group the species on the Y axis by traits
+#' @param grouping_var_y_2 second grouping variable
+#' @param lut_gensp a named vector of species names to change them
+#' @param excluded_spp a vector of species names to exclude from the figure
+#' @param included_variables a vector of environmental variable names to indicate which variables to include
+#' @param lut_ivars a named vector of environmental variable names to change them.
+#' @param group_by_trait UNDER CONSTRUCTION: a column name from the trait data (Hm$TrData) with which to sort the y axis
 #' @examples
 #' data("Hm")
 #' gghm_beta2(Hm)
 #'
 #' @export
-gghm_beta2 <- function(Hm, order_var = 'prevalence',
+gghm_beta2 <- function(Hm,
+                       order_var = 'prevalence',
                        grouping_var_y = NA,
-                       groupiin_var_y_2 = NA,
+                       grouping_var_y_2 = NA,
                        lut_gensp=NA,
                        excluded_spp = NA,
                        included_variables = NA,
-                       lut_ivars = NA){
+                       lut_ivars = NA,
+                       group_by_trait = NA){
   requireNamespace('dplyr')
-  requireNamespace('ggthemes')
   requireNamespace('tidyr')
   requireNamespace('tibble')
   requireNamespace('ggplot2')
@@ -398,7 +433,7 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
     dplyr::group_by(var, sp, Chain) |>
     dplyr::mutate(value = scale(value,center = F),
            sign = ifelse(value>0, "positive", "negative"),
-           median_value = median(value)) |>
+           median_value = stats::median(value)) |>
     dplyr::filter(value<4 & value>-4) |>
     dplyr::ungroup()
 
@@ -431,12 +466,12 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
     mbc0 <- dplyr::filter(mbc0, var %in% included_variables)
   }
 
-
   prevalence <- Hm$Y |>
     tibble::as_tibble(rownames = "plot")
   prevalence <- prevalence |>
     tidyr::pivot_longer(cols = names(prevalence)[2:ncol(prevalence)],
                  names_to = "sp") |>
+    dplyr::mutate(value = ifelse(value > 0, 1, 0)) |>
     dplyr::group_by(sp) |>
     dplyr::summarise(prevalence = sum(value),
               prev_pct = sum(value)/dplyr::n()*100) |>
@@ -450,8 +485,6 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
   if(any(!is.na(lut_gensp))){
     prevalence <- dplyr::mutate(prevalence, sp = lut_gensp[sp])
   }
-
-
 
   mbc <- mbc0 |>
     dplyr::left_join(Hm$TrData |>
@@ -467,29 +500,25 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
     dplyr::mutate(sp = paste0(sp, " (", prev_pct, ")")) |>
     dplyr::mutate(sp = stringr::str_replace_all(sp,"0.5", ".5"))
 
+  # redo from here with the group by trait thing
   vp_order <- mbc |>
     dplyr::left_join(prevalence) |>
     dplyr::filter(var == mbc$var[1],
            Iteration ==1, Chain==1) |>
-    dplyr::arrange((fg), prevalence)
+    dplyr::arrange(prevalence) # this is where the order by functional group comes in
   vp_order <- vp_order |>
     dplyr::mutate(sp_f = factor(sp, levels = vp_order$sp)) |>
     dplyr::select(sp, sp_f)
 
+  # maybe have a whole section here where we just do this
+  if(!any(is.na(group_by_trait))){
+    dd <- Hm$TrData |>
+      tibble::as_tibble(rownames = 'sp') |>
+      dplyr::filter(!sp %in% excluded_spp) |>
+      dplyr::pull(dplyr::any_of(group_by_trait))
 
-
-   n_native <- ifelse(!any(is.na(excluded_spp)),
-     Hm$TrData  |>
-       tibble::as_tibble(rownames = 'sp') |>
-       dplyr::filter(!sp %in% excluded_spp) |>
-      dplyr::mutate(i = ifelse(origin == "I", 1, 0)) |>
-      dplyr::pull(i) |>
-      sum(),
-     Hm$TrData  |>
-       tibble::as_tibble(rownames = 'sp') |>
-       dplyr::mutate(i = ifelse(origin == "I", 1, 0)) |>
-       dplyr::pull(i) |>
-       sum())
+    hline_position <- table(dd)
+   }
 
   dp <- mbc |> dplyr::left_join(vp_order)
 
@@ -506,13 +535,15 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
   p <- ggplot2::ggplot(dp,
              ggplot2::aes(x=value, y = sp_f,
                   group=as.factor(Chain))) +
-    # ggplot2::scale_color_manual(values = (c("white", "grey90")))+
-    ggplot2::geom_hline(yintercept = n_native + 0.5) +
-    ggdist::stat_slab(height=2,  lwd = .75, #alpha = 0.95,
-                      # color = "black",
-                     ggplot2::aes(fill = ggplot2::after_stat(x>0), color = p_equiv,
-                          alpha = exp(abs(median_value))))+
-    ggplot2::facet_wrap(~var, scales = "free_x", nrow=1, ncol=length(unique(mbc$var))) +
+    ggdist::stat_slab(height=2,
+                      lwd = .75,
+                      ggplot2::aes(fill = ggplot2::after_stat(x>0),
+                                   color = p_equiv,
+                                   alpha = exp(abs(median_value))))+
+    ggplot2::facet_wrap(~var,
+                        scales = "free_x",
+                        nrow=1,
+                        ncol=length(unique(mbc$var))) +
     ggplot2::scale_alpha_continuous(range = c(0,2*(1/length(unique(mbc$Chain)))))+
     ggplot2::theme_classic() +
     ggplot2::scale_color_manual(values = pcols) +
@@ -522,10 +553,11 @@ gghm_beta2 <- function(Hm, order_var = 'prevalence',
     ggplot2::xlab("Scaled Effect on Occurrence Probability") +
     ggplot2::ylab("Species or Species Group (% Prevalence)") +
     ggplot2::theme(panel.spacing.x = ggplot2::unit(-1, "lines"),
-          # panel.grid = element_blank(),
           axis.text.x = ggplot2::element_blank(),
           axis.ticks.x = ggplot2::element_blank(),
-          axis.text.y = ggplot2::element_text(size=12))#;p
+          axis.text.y = ggplot2::element_text(size=12))
+  if(!any(is.na(group_by_trait))) p<- p + ggplot2::geom_hline(yintercept = hline_position + 0.5)
+
   return(p)
 }
 
@@ -555,7 +587,7 @@ gghm_beta_tests <- function(Hm, ci = 0.95){
     dplyr::group_by(var, sp, Chain) |>
     dplyr::mutate(value = scale(value,center = F),
                   sign = ifelse(value>0, "positive", "negative"),
-                  median_value = median(value)) |>
+                  median_value = stats::median(value)) |>
     dplyr::filter(value<4 & value>-4) |>
     dplyr::ungroup()
 
@@ -570,23 +602,25 @@ gghm_beta_tests <- function(Hm, ci = 0.95){
           bayestestR::describe_posterior(ci = ci) |>
           dplyr::mutate(var = i, sp=j)
         result[[cc]][2,2] <- result[[cc]][1,2]
-        result[[cc]] <- filter(result[[cc]], Parameter == "Posterior") |>
+        result[[cc]] <- dplyr::filter(result[[cc]], Parameter == "Posterior") |>
           dplyr::select(-Parameter)
         cc <- cc + 1
       }}
-    return(result |> bind_rows() |> as_tibble())
+    return(result |> dplyr::bind_rows() |> tibble::as_tibble())
 
 }
 
 #' plot trait covariate relationships
 #'
+#' @param Hm an Hmsc object
+#' @param support_level make the boxes dissappear below this number
+#' @param no_intercept exclude the intercept?
+#' @param title plot title
 #' @export
 gghm_gamma <- function(Hm,
                          support_level = 0.89,
                          no_intercept = TRUE,
                          title = "Effects on Traits"){
-  requireNamespace('magrittr')
-  requireNamespace('BayestestR')
   requireNamespace('stringr')
   requireNamespace('Hmsc')
   requireNamespace('dplyr')
@@ -636,11 +670,12 @@ gghm_gamma <- function(Hm,
   lut_gamma <- trNames
   names(lut_gamma) <- unique(means_gammal$Trait)
 
-  supported_gamma <- postGamma$support |>
+  supported_gamma0 <- postGamma$support |>
     tibble::as_tibble() |>
     tibble::rowid_to_column("env_var") |>
-    dplyr::mutate(env_var = covNames) %>%
-    tidyr::pivot_longer(cols=names(.)[2:ncol(.)],
+    dplyr::mutate(env_var = covNames)
+  supported_gamma <- supported_gamma0 |>
+    tidyr::pivot_longer(cols=names(supported_gamma0)[2:ncol(.)],
                  names_to = "Trait",
                  values_to = "Support") |>
     dplyr::filter(Support > support_level |Support< (1-support_level),
@@ -652,17 +687,16 @@ gghm_gamma <- function(Hm,
                   env_var != "(Intercept)")
 
   p_gamma <- supported_gamma |>
-    ggplot2::ggplot(ggplot2::aes(x=env_var,y=(Trait), fill = Mean, color = sign)) +
+    ggplot2::ggplot(ggplot2::aes(x=env_var,y=Trait, fill = Mean, color = sign)) +
     ggplot2::geom_tile(lwd=.5) +
     ggpubr::theme_pubclean()+
     ggplot2::scale_fill_steps2() +
     ggplot2::scale_color_manual(values = c(("red"), ("blue"))) +
     ggplot2::guides(color = "none")+
-    ggplot2::theme(axis.text.x = element_text(angle=45, vjust=1,hjust = 1),
-          # axis.title = element_blank(),
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45, vjust=1,hjust = 1),
           legend.position = "right",
-          plot.background = element_rect(color="black"),
-          plot.title = element_text(hjust = 1, face = "bold")) +
+          plot.background = ggplot2::element_rect(color="black"),
+          plot.title = ggplot2::element_text(hjust = 1, face = "bold")) +
     ggplot2::ggtitle(title) +
     ggplot2::xlab("Environmental Filters") +
     ggplot2::ylab("Traits")
@@ -671,45 +705,54 @@ gghm_gamma <- function(Hm,
 }
 
 #' plot trait covariate associations
-#'
+#' @param Hm an Hmsc model object
+#' @param lut_varnames a named vector used to change the variable names
 #' @export
 gghm_gamma2 <- function(Hm,
                           lut_varnames = NA){
-  c<-convertToCodaObject(Hm)
+  c<-Hmsc::convertToCodaObject(Hm)
   mbc <- ggmcmc::ggs(c$Gamma) |>
-    separate(.,
+    tidyr::separate(.,
              col = "Parameter",
              into = c("var", "x1", "trait", "x2"),
              sep = " ") |>
     dplyr::select(-x1, -x2) |>
-    mutate(var = str_remove_all(var, "G\\["),
-           trait = str_remove_all(trait, "yes"),
-           trait = str_remove_all(trait, "cots"),
-           trait = str_replace_all(trait, "originN", "native"),
-           trait = str_to_title(trait))|>
-    filter(var != "(Intercept)", trait != "(Intercept)")
+    dplyr::mutate(var = stringr::str_remove_all(var, "G\\["),
+           trait = stringr::str_remove_all(trait, "yes"),
+           trait = stringr::str_remove_all(trait, "cots"),
+           trait = stringr::str_replace_all(trait, "originN", "native"),
+           trait = stringr::str_to_title(trait))|>
+    dplyr::filter(var != "(Intercept)", trait != "(Intercept)")
 
   if(!is.na(lut_varnames)){
-    mbc <- mutate(mbc, var = lut_varnames[var])
+    mbc <- dplyr::mutate(mbc, var = lut_varnames[var])
   }
 
-  p <- ggplot(mbc,
+  p <- ggplot2::ggplot(mbc,
               ggplot2::aes(x=value, y = trait,
                   fill=as.factor(Chain))) +
     ggdist::stat_dist_interval(alpha=0.5) +
-    facet_wrap(~var, scales = "free_x", nrow=2,
+    ggplot2::facet_wrap(~var, scales = "free_x", nrow=2,
                ncol=ceiling(length(unique(mbc$var))/2)) +
-    theme_classic() +
-    guides(fill="none")+
-    geom_vline(xintercept=0, col="black", lty=2) +
-    xlab("Effect on Occurrence Probability") +
-    ylab("Trait") +
-    theme(strip.text = element_markdown())
+    ggplot2::theme_classic() +
+    ggplot2::guides(fill="none")+
+    ggplot2::geom_vline(xintercept=0, col="black", lty=2) +
+    ggplot2::xlab("Effect on Occurrence Probability") +
+    ggplot2::ylab("Trait") +
+    ggplot2::theme(strip.text = ggtext::element_markdown())
   return(p)
 }
 
 #' create a correlation plot for species associations
 #'
+#' @param Hm an Hmsc object
+#' @param support_level make sqaures white below this level
+#' @param hc.method hierarchical clustering method
+#' @param hc.order logical, whether to actually order the species according to hc.method
+#' @param lut_gensp a named vector for changing species names
+#' @param axis_text_colors_x a vector of one color
+#' @param axis_text_colors_y a vector of one color
+#' @param title the plot title
 #' @export
 gghm_omega <- function(Hm,
                          support_level = 0.89,
@@ -756,7 +799,10 @@ gghm_omega <- function(Hm,
 
 #' get Tjur R2 for each species
 #'
-#' @param which either all, r2 or named. all is a histogram with R2 and RSME. r2 is just R2. named is bar plot each species named on the  y axis.
+#' @param Hm an Hmsc model object
+#' @param title the plot title
+#' @param sp_names look up table to change species names to be more presentable
+#'
 #' @export
 gghm_r2_tjur <- function(Hm, title = "Variance Explained", sp_names = 'none'){
   requireNamespace("Hmsc")
@@ -765,7 +811,6 @@ gghm_r2_tjur <- function(Hm, title = "Variance Explained", sp_names = 'none'){
   requireNamespace("ggplot2")
   requireNamespace("ggtext")
   requireNamespace("dplyr")
-  requireNamespace("magrittr")
 
   mpost <- Hmsc::convertToCodaObject(Hm)
   preds <- Hmsc::computePredictedValues(Hm)
@@ -775,14 +820,13 @@ gghm_r2_tjur <- function(Hm, title = "Variance Explained", sp_names = 'none'){
   df <- tidyr::pivot_longer(df, cols = names(df))
   spp <- colnames(Hm$Y)
 
-  # if(which == "named"){
     means <- df |>
       dplyr::filter(name %in% c("TjurR2", "R2")) |>
       dplyr::mutate(species = spp |> stringr::str_replace_all("_", ' ')) |>
-      na.omit()
+      stats::na.omit()
     if(sp_names[1] != "none") means <- dplyr::mutate(means, species = sp_names[species])
     return(
-      ggplot2::ggplot(means, ggplot2::aes(x=value, y=reorder(species, value))) +
+      ggplot2::ggplot(means, ggplot2::aes(x=value, y= stats::reorder(species, value))) +
              ggplot2::geom_bar(stat = "identity") +
              ggplot2::ggtitle(title) +
              ggplot2::ylab("Species") +
@@ -791,50 +835,6 @@ gghm_r2_tjur <- function(Hm, title = "Variance Explained", sp_names = 'none'){
                             axis.text.y = ggplot2::element_text(face = "italic")) +
         ggplot2::theme_bw()
       )
-  # }
-  #
-  # if(which == "all"){
-  #   means <- df |>
-  #     dplyr::group_by(name) |>
-  #     dplyr::summarise(mean = mean(value)) |>
-  #     dplyr::ungroup()
-  #
-  #   return(ggplot2::ggplot(df) +
-  #            ggplot2::geom_histogram(aes(x=value)) +
-  #            ggplot2::facet_wrap(~name) +
-  #            ggplot2::geom_text(data = means, ggplot2::aes(label = paste("Avg =", round(mean, 2))), x=.75, y=4) +
-  #            ggplot2::ggtitle(title))}
-  #
-  # if(which == "r2"){
-  #   means <- df |>
-  #     dplyr::filter(name == "R2") |>
-  #     dplyr::group_by(name) |>
-  #     dplyr::summarise(mean = mean(value),
-  #               max = max(value),
-  #               min = min(value)) |>
-  #     dplyr::ungroup()
-  #
-  #   return(ggplot2::ggplot(df%>% dplyr::filter(name == "R2") ) +
-  #            ggplot2::geom_histogram(aes(x=value),bins = 15) +
-  #            ggplot2::ggtitle(paste("Tjur R<sup>2</sup>, Avg:", round(means$mean, 2),
-  #                                   ", Range: ", round(means$min, 2)," - ",round(means$max, 2))) +
-  #            ggplot2::ggtitle(title) +
-  #            ggplot2::theme(plot.title = ggtext::element_markdown()))
-  # }
 }
 
 
-
-# lut_varnames <- c("Cheatgrass Cover" = "B_tectorum",
-#                      "Shrub Cover" = "shrub_pq",
-#                      "Native Perennial Cover" = "perennial_herbaceous",
-#                      "Grazing Intensity" = "grazing_intensity",
-#                      "Later Ignitions" = "StartMonth",
-#                      "Time Since Fire" = "tsf",
-#                      'Pre-Fire AET' = 'max_aet_z_preceeding_fire',
-#                      'Pre-Fire Tmin' = 'median_tmn_z_preceeding_fire',
-#                      'Post-Fire AET' = 'min_aet_z_after_fire',
-#                      'Pre-Fire AET' = 'min_aet_z_preceeding_fire',
-#                      'max_def_z_after_fire' = 'Post-Fire CWD',
-#                      "elevation_m" = 'Elevation',
-#                      'Warmer Aspects' = "folded_aspect")

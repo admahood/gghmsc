@@ -1,6 +1,6 @@
 Package: gghmsc
 Title: Make nice plots for working with Hmsc JSDMs
-Version: 0.5
+Version: 0.5.2
 Authors@R: 
     person("Adam", "Mahood", , "admahood@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3791-9654"))
@@ -9,20 +9,19 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports: bayestestR,
-  coda,
-  dplyr,
-  Hmsc,
-  ggcorrplot,
-  ggdist,
-  ggmcmc,
-  ggnewscale,
-  ggplot2,
-  ggtext,
-  ggthemes,
-  ggpubr,
-  magrittr,
-  stringr,
-  tibble,
-  tidyr,
-  ggthemes
+Imports: 
+    bayestestR,
+    coda,
+    dplyr,
+    Hmsc,
+    ggcorrplot,
+    ggdist,
+    ggmcmc,
+    ggnewscale,
+    ggplot2,
+    ggtext,
+    ggpubr,
+    stringr,
+    tibble,
+    tidyr,
+    stats

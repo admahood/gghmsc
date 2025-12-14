@@ -8,12 +8,32 @@ gghm_beta2(
   Hm,
   order_var = "prevalence",
   grouping_var_y = NA,
-  groupiin_var_y_2 = NA,
+  grouping_var_y_2 = NA,
   lut_gensp = NA,
   excluded_spp = NA,
   included_variables = NA,
-  lut_ivars = NA
+  lut_ivars = NA,
+  group_by_trait = NA
 )
+}
+\arguments{
+\item{Hm}{an Hmsc model object}
+
+\item{order_var}{order the variables on the y axis with this trait variable}
+
+\item{grouping_var_y}{group the species on the Y axis by traits}
+
+\item{grouping_var_y_2}{second grouping variable}
+
+\item{lut_gensp}{a named vector of species names to change them}
+
+\item{excluded_spp}{a vector of species names to exclude from the figure}
+
+\item{included_variables}{a vector of environmental variable names to indicate which variables to include}
+
+\item{lut_ivars}{a named vector of environmental variable names to change them.}
+
+\item{group_by_trait}{UNDER CONSTRUCTION: a column name from the trait data (Hm$TrData) with which to sort the y axis}
 }
 \description{
 Plot beta estimates using PDFs

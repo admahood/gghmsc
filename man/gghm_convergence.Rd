@@ -14,15 +14,17 @@ gghm_convergence(
 )
 }
 \arguments{
-\item{beta}{if TRUE, plots the beta (env. filters) parameters}
+\item{Hm}{an Hmsc model object}
 
-\item{V}{if TRUE, plots the V parameters}
+\item{beta}{if TRUE, plots the beta parameters (environmental covariates).}
 
-\item{gamma}{if TRUE, plots the gamma (traits) paramters}
+\item{V}{if TRUE, plots the V parameters.}
 
-\item{omega}{if TRUE, plots the omega (spp associations) parameters}
+\item{gamma}{if TRUE, plots the gamma parameters (traits).}
 
-\item{title}{character string to customize}
+\item{omega}{if TRUE, plots the omega parameters (spp associations).}
+
+\item{title}{character string.}
 }
 \description{
 Plot model convergence indexes

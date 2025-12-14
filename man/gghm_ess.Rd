@@ -13,6 +13,19 @@ gghm_ess(
   title = "Model Convergence"
 )
 }
+\arguments{
+\item{Hm}{an Hmsc model object}
+
+\item{beta}{if TRUE, plots the beta parameters (environmental covariates).}
+
+\item{V}{if TRUE, plots the V parameters.}
+
+\item{gamma}{if TRUE, plots the gamma parameters (traits).}
+
+\item{omega}{if TRUE, plots the omega parameters (spp associations).}
+
+\item{title}{character string.}
+}
 \description{
 Plot effective sample size
 }

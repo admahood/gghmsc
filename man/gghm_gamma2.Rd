@@ -6,6 +6,11 @@
 \usage{
 gghm_gamma2(Hm, lut_varnames = NA)
 }
+\arguments{
+\item{Hm}{an Hmsc model object}
+
+\item{lut_varnames}{a named vector used to change the variable names}
+}
 \description{
 plot trait covariate associations
 }

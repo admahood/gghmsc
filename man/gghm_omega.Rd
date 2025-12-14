@@ -15,6 +15,23 @@ gghm_omega(
   title = "Residual Species Associations"
 )
 }
+\arguments{
+\item{Hm}{an Hmsc object}
+
+\item{support_level}{make sqaures white below this level}
+
+\item{hc.method}{hierarchical clustering method}
+
+\item{hc.order}{logical, whether to actually order the species according to hc.method}
+
+\item{lut_gensp}{a named vector for changing species names}
+
+\item{axis_text_colors_x}{a vector of one color}
+
+\item{axis_text_colors_y}{a vector of one color}
+
+\item{title}{the plot title}
+}
 \description{
 create a correlation plot for species associations
 }
