@@ -1,6 +1,6 @@
 #' An Hmsc object
 #'
-#' @format ## `Hm`
+#' @format ## 'Hm'
 #' An Hmsc object. Basically a list.
 #' \describe{
 #'   \item{XData}{data frame of environmental covariates}
@@ -9,4 +9,4 @@
 #'   ...
 #' }
 #' @source <https://www.github.com/admahood/time-since-fire>
-'Hm'
+"Hm"
