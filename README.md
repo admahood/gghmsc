@@ -10,6 +10,10 @@ ggplot functions for use with HMSC Joint Species Distribution Models
 
 Please raise an issue if you have any questions, bugs or feature requests
 
+Example data and plots are from an earlier version of a model in:
+
+Mahood, A.L., Chambers, J.C., Barnard, D.M., Suding, K.N., and Balch, J.K. (2025) “Non-native grass invasion drives biodiversity loss after a single fire in a semi-arid shrubland,” Biological Conservation, 310, p. 111400. Available at: https://doi.org/10.1016/j.biocon.2025.111400.
+
 ## gghm_convergence
 
 This function is to check model convergence. on the left you'll have ESS, which is effective sample size, and on the right you'll have your psrf (R hat). psrf you want below 1.1 (or 1.001), and ESS you want to ideally match the number of samples (so for 1000 samples, and 4 chains, you want 4000).

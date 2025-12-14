@@ -1,24 +1,28 @@
 Package: gghmsc
 Title: Make nice plots for working with Hmsc JSDMs
-Version: 0.3
+Version: 0.5
 Authors@R: 
     person("Adam", "Mahood", , "admahood@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3791-9654"))
-Description: This package makes really nice looking plots from the objects outputted by Hmsc. ggmcmc is used extensively.
+Description: This package makes really nice-looking plots from the objects outputted by Hmsc.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports: bayestestR,
   coda,
-  Hmsc,
   dplyr,
-  tibble,
+  Hmsc,
   ggcorrplot,
   ggdist,
   ggmcmc,
   ggnewscale,
   ggplot2,
   ggtext,
+  ggthemes,
+  ggpubr,
+  magrittr,
+  stringr,
+  tibble,
   tidyr,
   ggthemes
