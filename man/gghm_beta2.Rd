@@ -12,6 +12,7 @@ gghm_beta2(
   lut_gensp = NA,
   excluded_spp = NA,
   included_variables = NA,
+  top_x_species = NA,
   lut_ivars = NA,
   group_by_trait = NA
 )
@@ -30,6 +31,8 @@ gghm_beta2(
 \item{excluded_spp}{a vector of species names to exclude from the figure}
 
 \item{included_variables}{a vector of environmental variable names to indicate which variables to include}
+
+\item{top_x_species}{a numeric, indicating to only plot the top X most prevalent species}
 
 \item{lut_ivars}{a named vector of environmental variable names to change them.}
 

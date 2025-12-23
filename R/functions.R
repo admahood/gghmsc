@@ -401,6 +401,7 @@ gghm_beta <- function(Hm,
 #' @param lut_gensp a named vector of species names to change them
 #' @param excluded_spp a vector of species names to exclude from the figure
 #' @param included_variables a vector of environmental variable names to indicate which variables to include
+#' @param top_x_species a numeric, indicating to only plot the top X most prevalent species
 #' @param lut_ivars a named vector of environmental variable names to change them.
 #' @param group_by_trait UNDER CONSTRUCTION: a column name from the trait data (Hm$TrData) with which to sort the y axis
 #' @examples
@@ -415,6 +416,7 @@ gghm_beta2 <- function(Hm,
                        lut_gensp=NA,
                        excluded_spp = NA,
                        included_variables = NA,
+                       top_x_species = NA,
                        lut_ivars = NA,
                        group_by_trait = NA){
   # todo: maybe have an option for a prevalence cutoff, or top x most prevalent
@@ -531,6 +533,17 @@ gghm_beta2 <- function(Hm,
 
   if(any(!is.na(lut_ivars))){
     dp <- dplyr::mutate(dp, var = lut_ivars[var])
+  }
+
+  if(!is.na(top_x_species)){
+    top_spp <- dp |>
+      dplyr::select(sp, prevalence) |>
+      unique() |>
+      dplyr::mutate(sp_rank = length(unique(dp$sp)) -rank(prevalence)) |>
+      dplyr::filter(sp_rank < top_x_species) |>
+      dplyr::pull(sp)
+
+    dp <- dplyr::filter(dp, sp %in% top_spp)
   }
 
   pcols <- c("ns" = "white",
