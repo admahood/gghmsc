@@ -26,3 +26,8 @@ gghm_vp(
 \description{
 Plot variance partitioning
 }
+\examples{
+data('Hm')
+gghm_vp(Hm)
+
+}

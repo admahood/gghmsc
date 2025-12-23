@@ -5,7 +5,7 @@
 \alias{Hm}
 \title{An Hmsc object}
 \format{
-\subsection{\code{Hm}}{
+\subsection{'Hm'}{
 
 An Hmsc object. Basically a list.
 \describe{

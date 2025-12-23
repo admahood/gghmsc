@@ -175,6 +175,11 @@ gghm_ess <- function(Hm,
 #' @param cols a vector of colors
 #' @param lut_varnames a named vector (look up table) for changing the names of variables. Useful for making things more presentable for publication.
 #' @param lut_sppnames a named vector (look up table) for changing the names of species
+#'
+#' @examples
+#' data('Hm')
+#' gghm_vp(Hm)
+#'
 #' @export
 gghm_vp <- function(Hm,
                       title = "Variance Explained",
@@ -298,18 +303,18 @@ gghm_beta <- function(Hm,
     tibble::rowid_to_column("env_var") |>
     dplyr::mutate(env_var = c(covNames)) |>
     tidyr::pivot_longer(cols=colnames(postBeta$mean),
-                        names_to = "Species", values_to = "Mean")
+                        names_to = "species", values_to = "Mean")
 
   supported <- postBeta$support |>
     tibble::as_tibble() |>
     tibble::rowid_to_column("env_var") |>
     dplyr::mutate(env_var = covNames) |>
     tidyr::pivot_longer(cols=colnames(postBeta$support),
-                 names_to = "Species",
-                 values_to = "Support") |>
-    dplyr::filter(Support > support_level | Support < (1-support_level),
+                 names_to = "species",
+                 values_to = "support") |>
+    dplyr::filter(support > support_level | support < (1-support_level),
            env_var != "(Intercept)") |>
-    dplyr::left_join(means, by = c("env_var", "Species"))|>
+    dplyr::left_join(means, by = c("env_var", "species"))|>
     dplyr::mutate(sign = ifelse(Mean>0, "+", "-"))
 
   # calculating prevalence if it's abundance, need to reclassify
@@ -363,12 +368,12 @@ gghm_beta <- function(Hm,
   }
 
   if(is.vector(lut_varnames)) supported <- supported |> dplyr::mutate(env_var = lut_varnames[env_var])
-  if(is.vector(lut_sppnames)) supported <- supported |> dplyr::mutate(Species = lut_varnames[Species])
+  if(is.vector(lut_sppnames)) supported <- supported |> dplyr::mutate(species = lut_varnames[species])
   if(no_intercept) supported <- supported |> dplyr::filter(env_var != "(Intercept)")
-  if(!all(is.na(spp_exclude))) supported <- dplyr::filter(supported, !Species %in% spp_exclude)
+  if(!all(is.na(spp_exclude))) supported <- dplyr::filter(supported, !species %in% spp_exclude)
 
   p_beta <- supported |>
-    ggplot2::ggplot(ggplot2::aes(x=env_var,y=stats::reorder(Species_f,Species))) +
+    ggplot2::ggplot(ggplot2::aes(x=env_var,y=stats::reorder(species_f,species))) +
     ggplot2::geom_tile(lwd=.5,ggplot2::aes(fill = Mean, color = sign)) +
     ggplot2::theme_classic()+
     ggplot2::scale_fill_steps2() +
@@ -412,6 +417,7 @@ gghm_beta2 <- function(Hm,
                        included_variables = NA,
                        lut_ivars = NA,
                        group_by_trait = NA){
+  # todo: maybe have an option for a prevalence cutoff, or top x most prevalent
   requireNamespace('dplyr')
   requireNamespace('tidyr')
   requireNamespace('tibble')
@@ -477,6 +483,7 @@ gghm_beta2 <- function(Hm,
               prev_pct = sum(value)/dplyr::n()*100) |>
     dplyr::mutate(prev_pct = ifelse(prev_pct<1, round(prev_pct,1), round(prev_pct))) |>
     dplyr::ungroup()
+
   if(any(!is.na(excluded_spp))){
     mbc0 <- dplyr::filter(mbc0, !sp %in% excluded_spp)
     prevalence <- dplyr::filter(prevalence, !sp %in% excluded_spp)
@@ -487,8 +494,8 @@ gghm_beta2 <- function(Hm,
   }
 
   mbc <- mbc0 |>
-    dplyr::left_join(Hm$TrData |>
-                       tibble::as_tibble(rownames = "sp")) |>
+    # dplyr::left_join(Hm$TrData |>
+    #                    tibble::as_tibble(rownames = "sp")) |>
     dplyr::left_join(pd)
 
   if(any(!is.na(lut_gensp))){
