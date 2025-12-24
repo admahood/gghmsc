@@ -536,10 +536,12 @@ gghm_beta2 <- function(Hm,
   }
 
   if(!is.na(top_x_species)){
-    top_spp <- dp |>
+    spp <- dp |>
       dplyr::select(sp, prevalence) |>
       unique() |>
-      dplyr::mutate(sp_rank = length(unique(dp$sp)) -rank(prevalence)) |>
+      stats::na.omit()
+    top_spp <- spp |>
+      dplyr::mutate(sp_rank = length(unique(spp$sp)) - rank(prevalence)) |>
       dplyr::filter(sp_rank < top_x_species) |>
       dplyr::pull(sp)
 
@@ -856,5 +858,153 @@ gghm_r2_tjur <- function(Hm, title = "Variance Explained", sp_names = 'none'){
         ggplot2::theme_bw()
       )
 }
+
+
+# scratch ======================================================================
+#' gradient plots for continuous variables
+#'
+#' @param Hm an Hmsc model object
+#' @param title character. the plot title (optional)
+#' @param focal_variable the variable against which to plot model predictions
+#' @param fn filename if you wish to save (optional)
+#' @param chains number of MCMC chains used
+#'
+#' @export
+gghm_gradient_c <- function(Hm,
+                            focal_variable,
+                            fn = NA,
+                            title = NA,
+                            chains){
+  requireNamespace('Hmsc')
+  requireNamespace('dplyr')
+  requireNamespace('tibble')
+  requireNamespace('tidyr')
+  gradient <- Hmsc::constructGradient(Hm, focalVariable = focal_variable)#,
+  predY <- stats::predict(Hm,
+                  XData = gradient$XDataNew,
+                  studyDesign = gradient$studyDesignNew,
+                  ranLevels = gradient$rLNew,
+                  expected=TRUE)
+
+  n_runs <- chains*Hm$samples
+
+  pred_df <- do.call("rbind", predY) |>
+    tibble::as_tibble() |>
+    mutate(f_var = rep(gradient$XDataNew |>
+                         dplyr::pull(focal_variable), n_runs)) |>
+    tidyr::pivot_longer(names_to = "Species", -f_var) |>
+    dplyr::group_by(Species, f_var) |>
+    dplyr::summarise(mean = stats::median(value),
+                     upr = stats::quantile(value, 0.975),
+                     lwr = stats::quantile(value, 0.025)) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(Species = stringr::str_replace_all(Species," ", "_")#,
+           #Species = lut_prevalent_species[Species]
+           ) #|>
+    # left_join(prevalence) %>%
+    # arrange(desc(prevalence)) %>%
+    # mutate(Species_f = factor(Species, levels = unique(.$Species))) %>%
+    # filter(Species != "unknown_forb")
+
+  pred_df_raw <-do.call("rbind", predY) |>
+    tibble::as_tibble() |>
+    dplyr::mutate(f_var = rep(gradient$XDataNew |>
+                                dplyr::pull(focal_variable), n_runs),
+           run = rep(1:n_runs, each=20)) |>
+    tidyr::pivot_longer(names_to = "Species", -c(f_var, run)) |>
+    dplyr::mutate(Species = stringr::str_replace_all(Species," ", "_")) #%>%
+    # dplyr::left_join(prevalence) %>%
+    # # dplyr::mutate(origin = lut_origin[Species]) %>%
+    # arrange(origin,desc(prevalence)) %>%
+    # filter(Species != "unknown_forb")%>%
+    # mutate(Species = lut_prevalent_species[Species]) %>%
+    # mutate(Species_f = factor(Species, levels = unique(.$Species)))
+
+  nspp = pred_df_raw$Species |> unique() |> length()
+  nrowz = round(nspp/5)
+
+  p_preds <- pred_df_raw  |>
+    ggplot2::ggplot(ggplot2::aes(x=f_var, y=value)) +
+    ggplot2::geom_line(alpha=0.05, ggplot2::aes(group=run),
+                              # color = origin),
+              key_glyph = "rect")+
+    ggplot2::geom_line(data = pred_df, lwd=1, alpha=0.95, color="black",
+                       ggplot2::aes(y=mean)) +
+    ggplot2::facet_wrap(~Species, nrow = nrowz) +
+    ggplot2::xlab(focal_variable) +
+    ggplot2::ylab("Probability of Occurrence") +
+    # guides(color=guide_legend(override.aes = list(alpha=1)))+
+    # scale_color_manual(values = c("#FFC845", "#007DBA"),
+    #                    labels = c("Introduced", "Native"))+
+    ggplot2::theme_classic()+
+    ggplot2::theme(legend.position = c(1,1),
+          legend.justification = c(1,1),
+          strip.text = ggplot2::element_text(face = "italic"),
+          legend.background = ggplot2::element_rect(fill="transparent"),
+          legend.title = ggplot2::element_blank(),
+          panel.border = ggplot2::element_rect(fill=NA, linewidth =.75))
+
+  if(!is.na(fn))ggplot2::ggsave(p_preds,
+                              filename = fn, width=10, height=nrowz*2)
+  return(p_preds)
+}
+# gradient depth ==================
+#
+# Gradient = constructGradient(m, focalVariable = "depth",
+#                              non.focalVariables=list(elevation=list(1),
+#                                                      sh_sb_u_top2=list(1),
+#                                                      rdnbr=list(1),
+#                                                      f_aspect=list(1)))
+#
+# predY = predict(m, XData=Gradient$XDataNew, studyDesign=Gradient$studyDesignNew,
+#                 ranLevels=Gradient$rLNew, expected=TRUE)
+#
+# n_runs <- nChains*samples
+#
+# pred_df <- do.call("rbind", predY) %>%
+#   as_tibble() %>%
+#   mutate(depth = rep(Gradient$XDataNew$depth, n_runs)) %>%
+#   pivot_longer(values_to = "cover", names_to = "Species", -depth) %>%
+#   group_by(Species, depth) %>%
+#   dplyr::summarise(mean = median(cover),
+#                    upr = quantile(cover, 0.975),
+#                    lwr = quantile(cover, 0.025)) %>%
+#   ungroup() %>%
+#   mutate(Species = str_replace_all(Species," ", "_"),
+#          Species = lut_prevalent_species[Species]) %>%
+#   left_join(prevalence) %>%
+#   arrange(desc(prevalence)) %>%
+#   mutate(Species_f = factor(Species, levels = unique(.$Species))) %>%
+#   filter(Species != "unknown_forb")
+#
+# pred_df_raw <-do.call("rbind", predY) %>%
+#   as_tibble() %>%
+#   mutate(depth = rep(Gradient$XDataNew$depth, n_runs),
+#          run = rep(1:n_runs,each=2)) %>%
+#   pivot_longer(values_to = "cover", names_to = "Species", -c(depth,run))%>%
+#   mutate(Species = str_replace_all(Species," ", "_")) %>%
+#   left_join(prevalence) %>%
+#   mutate(origin = lut_origin[Species]) %>%
+#   arrange(origin,desc(prevalence)) %>%
+#   filter(Species != "unknown_forb")%>%
+#   mutate(Species = lut_prevalent_species[Species]) %>%
+#   mutate(Species_f = factor(Species, levels = unique(.$Species)))
+#
+# pred_df_raw  %>%
+#   mutate(depth = ifelse(depth == "top2", "0-2", "2-6")) %>%
+#   ggplot(aes(x=depth, y=cover)) +
+#   geom_jitter(alpha=0.05, aes(color = origin))+
+#   geom_boxplot(fill = "transparent", outlier.shape = NA)+
+#   facet_wrap(~Species_f, nrow=2)+
+#   xlab("Soil Depth (cm)") +
+#   ylab("Probability of Occurrence") +
+#   guides(color=guide_legend(override.aes = list(alpha=1)))+
+#   scale_color_manual(values = c("#FFC845", "#007DBA"),
+#                      labels = c("Introduced", "Native"))+
+#   theme(legend.position = c(1,1),
+#         legend.justification = c(1,1),
+#         legend.background = element_rect(fill="transparent"),
+#         legend.title = element_blank())+
+#   ggsave("images/probit_preds_depth.png", width=10.5, height=6.5)
 
 
