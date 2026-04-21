@@ -419,7 +419,7 @@ gghm_beta2 <- function(Hm,
                        top_x_species = NA,
                        lut_ivars = NA,
                        group_by_trait = NA){
-  # todo: maybe have an option for a prevalence cutoff, or top x most prevalent
+  # todo: dtplyr
   requireNamespace('dplyr')
   requireNamespace('tidyr')
   requireNamespace('tibble')
@@ -860,7 +860,6 @@ gghm_r2_tjur <- function(Hm, title = "Variance Explained", sp_names = 'none'){
 }
 
 
-# scratch ======================================================================
 #' gradient plots for continuous variables
 #'
 #' @param Hm an Hmsc model object
@@ -890,7 +889,7 @@ gghm_gradient_c <- function(Hm,
 
   pred_df <- do.call("rbind", predY) |>
     tibble::as_tibble() |>
-    mutate(f_var = rep(gradient$XDataNew |>
+    dplyr::mutate(f_var = rep(gradient$XDataNew |>
                          dplyr::pull(focal_variable), n_runs)) |>
     tidyr::pivot_longer(names_to = "Species", -f_var) |>
     dplyr::group_by(Species, f_var) |>
@@ -948,6 +947,132 @@ gghm_gradient_c <- function(Hm,
                               filename = fn, width=10, height=nrowz*2)
   return(p_preds)
 }
+
+#' Plot beta posterior estimates using point bars
+#' @param Hm an Hmsc model object
+#' @param lut_gensp a named vector of species names to change them
+#' @param included_variables a vector of environmental variable names to indicate which variables to include
+#' @param top_x_species a numeric, indicating to only plot the top X most prevalent species
+#' @param lut_ivars a named vector of environmental variable names to change them.
+#' @param group_by_trait a column name from the trait data (Hm$TrData) with which to sort the y axis
+#' @examples
+#' data("Hm")
+#' gghm_beta3(Hm)
+#'
+#' @export
+gghm_beta3 <- function(Hm,
+                       group_by_trait = NA,
+                       included_variables = NA,
+                       lut_ivars = NA,
+                       top_x_species = NA,
+                       lut_gensp = NA){
+  requireNamespace('dplyr')
+  requireNamespace('tidyr')
+  requireNamespace('tibble')
+  requireNamespace('ggplot2')
+  requireNamespace('bayestestR')
+  requireNamespace('ggnewscale')
+  requireNamespace('ggmcmc')
+  requireNamespace("stringr")
+
+
+  cc <- Hmsc::convertToCodaObject(Hm)
+  # add dtplyr
+  mbc0 <- dplyr::ungroup(dplyr::filter(dplyr::mutate(dplyr::group_by(
+    dplyr::filter(dplyr::mutate(tidyr::separate(ggmcmc::ggs(cc$Beta),
+                                                col = "Parameter",
+                                                into = c("var", "sp"), sep = ", "),
+                                var = stringr::str_remove_all(var, "B\\["),
+                                var = stringr::str_remove_all(var,
+                                                              " \\(C\\d+\\)"),
+                                sp = stringr::str_remove_all(sp,
+                                                             " \\(S\\d+\\)\\]")),
+                  var != "(Intercept)"), var, sp, Chain),
+    value = scale(value, center = F),
+    sign = ifelse(value > 0, "positive", "negative"),
+    median_value = stats::median(value)),
+    value < 4 & value > -4))
+
+  if (any(!is.na(included_variables))) {
+    mbc0 <- dplyr::filter(mbc0, var %in% included_variables)
+  }
+
+    # cuantify prevalence
+  prevalence <- tibble::as_tibble(Hm$Y, rownames = "plot")
+  prevalence <- dplyr::ungroup(dplyr::mutate(dplyr::summarise(
+    dplyr::group_by(dplyr::mutate(tidyr::pivot_longer(prevalence,
+                                                      cols = names(prevalence)[2:ncol(prevalence)], names_to = "sp"),
+                                  value = ifelse(value > 0, 1, 0)), sp), prevalence = sum(value),
+    prev_pct = sum(value)/dplyr::n() * 100), prev_pct = ifelse(prev_pct < 1, round(prev_pct, 1), round(prev_pct))))
+
+  if(!any(is.na(group_by_trait))) mbc0 <- dplyr::left_join(mbc0, Hm$TrData |>
+                                                             tibble::as_tibble(rownames = 'sp') |>
+                                                             dplyr::select(sp, dplyr::any_of(group_by_trait)))
+
+  mbc <- dplyr::mutate(dplyr::mutate(dplyr::left_join(mbc0, prevalence),
+                                     sp = paste0(sp, " (", prev_pct, ")")),
+                       sp = stringr::str_replace_all(sp, "\\(0\\)", "\\(< 0.1\\)")
+  )
+  if(!any(is.na(group_by_trait))){
+    vp_order0 <- dplyr::arrange(dplyr::filter(dplyr::left_join(mbc,prevalence),
+                                              var == mbc$var[1],
+                                              Iteration == 1,
+                                              Chain == 1),
+                                !!rlang::sym(group_by_trait), prevalence)
+
+    }else{vp_order0 <- dplyr::arrange(dplyr::filter(dplyr::left_join(mbc,
+                                                                   prevalence),
+                                                  var == mbc$var[1], Iteration == 1,
+                                                  Chain == 1), prevalence)}
+
+  vp_order <- dplyr::select(dplyr::mutate(vp_order0, sp_f = factor(sp, levels = vp_order0$sp)), sp, sp_f)
+
+  dp <- dplyr::left_join(mbc, vp_order)
+
+  if (any(!is.na(lut_ivars))) {
+    dp <- dplyr::mutate(dp, var = lut_ivars[var])
+  }
+
+  if (!is.na(top_x_species)) {
+    spp <- stats::na.omit(unique(dplyr::select(dp, sp, prevalence)))
+    top_spp <- dplyr::pull(dplyr::filter(dplyr::mutate(spp, sp_rank = length(unique(spp$sp)) - rank(prevalence)),
+                                         sp_rank < top_x_species), sp)
+    dp <- dplyr::filter(dp, sp %in% top_spp)
+  }
+
+  p <- ggplot2::ggplot(dp,
+                       ggplot2::aes(x = value, y = sp_f, group = as.factor(Chain))) +
+    ggdist::stat_pointinterval(#height = 2, lwd = 0.75,
+      ggplot2::aes(fill = ggplot2::after_stat(x > 0),
+                   # color = p_equiv,
+                   alpha = exp(abs(median_value))
+      )) +
+    ggplot2::facet_wrap(~var, scales = "free_x", nrow = 1,
+                        ncol = length(unique(mbc$var))) +
+    ggplot2::scale_alpha_continuous(range = c(0, 2 * (1/length(unique(mbc$Chain))))) +
+    ggplot2::theme_classic() +
+    ggplot2::guides(alpha = "none", fill = "none") +
+    ggplot2::scale_color_brewer(palette = 'Pastel1') +
+    ggplot2::geom_vline(xintercept = 0, col = "black", lty = 2) +
+    ggplot2::xlab("Scaled Effect on Occurrence Probability") +
+    ggplot2::ylab("Species or Species Group (% Prevalence)") +
+    ggplot2::theme(panel.spacing.x = ggplot2::unit(-1, "lines"),
+                   legend.text = ggplot2::element_text(size = 20),
+                   legend.position = 'bottom',
+                   legend.title = ggplot2::element_blank(),
+                   axis.text.x = ggplot2::element_blank(),
+                   axis.ticks.x = ggplot2::element_blank(),
+                   axis.text.y = ggplot2::element_text(size = 12))
+
+  if(!any(is.na(group_by_trait))) p <- p +
+    ggplot2::geom_hline(ggplot2::aes(color = !!rlang::sym(group_by_trait),
+                                     yintercept=sp_f),
+                      lwd=6, alpha = 0.5, key_glyph = 'rect')
+
+  return(p)
+}
+
+
 # gradient depth ==================
 #
 # Gradient = constructGradient(m, focalVariable = "depth",

@@ -2,6 +2,7 @@
 
 export(gghm_beta)
 export(gghm_beta2)
+export(gghm_beta3)
 export(gghm_beta_tests)
 export(gghm_convergence)
 export(gghm_ess)
