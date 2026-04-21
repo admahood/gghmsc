@@ -1088,12 +1088,14 @@ gghm_beta3 <- function(Hm,
     dp <- dplyr::filter(dp, sp %in% top_spp)
   }
 
-  p <- ggplot2::ggplot(dp,
-                       ggplot2::aes(x = value, y = sp_f, group = as.factor(Chain))) +
-    ggdist::stat_pointinterval(#height = 2, lwd = 0.75,
-      ggplot2::aes(fill = ggplot2::after_stat(x > 0),
-                   # color = p_equiv,
-                   alpha = exp(abs(median_value))
+  if(!any(is.na(group_by_trait))){ p <- ggplot2::ggplot(dp,
+                                                       ggplot2::aes(x = value, y = sp_f, group = as.factor(Chain)))+
+    ggplot2::geom_hline(ggplot2::aes(color = !!rlang::sym(group_by_trait),
+                                     yintercept=sp_f),
+                        lwd=6, alpha = 0.5, key_glyph = 'rect') +
+    ggdist::stat_pointinterval(
+      ggplot2::aes(
+        alpha = exp(abs(median_value))
       )) +
     ggplot2::facet_wrap(~var, scales = "free_x", nrow = 1,
                         ncol = length(unique(mbc$var))) +
@@ -1111,11 +1113,36 @@ gghm_beta3 <- function(Hm,
                    axis.text.x = ggplot2::element_blank(),
                    axis.ticks.x = ggplot2::element_blank(),
                    axis.text.y = ggplot2::element_text(size = 12))
+  }else{
+    p <- ggplot2::ggplot(dp,
+                         ggplot2::aes(x = value, y = sp_f, group = as.factor(Chain)))+
+     ggdist::stat_pointinterval(#height = 2, lwd = 0.75,
+        ggplot2::aes(
+          alpha = exp(abs(median_value))
+        )) +
+      ggplot2::facet_wrap(~var, scales = "free_x", nrow = 1,
+                          ncol = length(unique(mbc$var))) +
+      ggplot2::scale_alpha_continuous(range = c(0, 2 * (1/length(unique(mbc$Chain))))) +
+      ggplot2::theme_classic() +
+      ggplot2::guides(alpha = "none", fill = "none") +
+      ggplot2::scale_color_brewer(palette = 'Pastel1') +
+      ggplot2::geom_vline(xintercept = 0, col = "black", lty = 2) +
+      ggplot2::xlab("Scaled Effect on Occurrence Probability") +
+      ggplot2::ylab("Species or Species Group (% Prevalence)") +
+      ggplot2::theme(panel.spacing.x = ggplot2::unit(-1, "lines"),
+                     legend.text = ggplot2::element_text(size = 20),
+                     legend.position = 'bottom',
+                     legend.title = ggplot2::element_blank(),
+                     axis.text.x = ggplot2::element_blank(),
+                     axis.ticks.x = ggplot2::element_blank(),
+                     axis.text.y = ggplot2::element_text(size = 12))
 
-  if(!any(is.na(group_by_trait))) p <- p +
-    ggplot2::geom_hline(ggplot2::aes(color = !!rlang::sym(group_by_trait),
-                                     yintercept=sp_f),
-                      lwd=6, alpha = 0.5, key_glyph = 'rect')
+
+     }
+
+
+
+
 
   return(p)
 }
