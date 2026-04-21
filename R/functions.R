@@ -394,6 +394,10 @@ gghm_beta <- function(Hm,
 }
 
 #' Plot beta estimates using PDFs
+#'
+#' @import data.table
+#' @importFrom data.table :=
+#' @importFrom dtplyr lazy_dt
 #' @param Hm an Hmsc model object
 #' @param order_var order the variables on the y axis with this trait variable
 #' @param grouping_var_y group the species on the Y axis by traits
@@ -421,6 +425,8 @@ gghm_beta2 <- function(Hm,
                        group_by_trait = NA){
   # todo: dtplyr
   requireNamespace('dplyr')
+  requireNamespace('dtplyr')
+  requireNamespace('data.table')
   requireNamespace('tidyr')
   requireNamespace('tibble')
   requireNamespace('ggplot2')
@@ -431,6 +437,7 @@ gghm_beta2 <- function(Hm,
 
   cc<-Hmsc::convertToCodaObject(Hm)
   mbc0 <- ggmcmc::ggs(cc$Beta) |>
+    dtplyr::lazy_dt() |>
     tidyr::separate(col = "Parameter",
              into = c("var", 'sp'),
              sep = ", ") |>
@@ -443,7 +450,8 @@ gghm_beta2 <- function(Hm,
            sign = ifelse(value>0, "positive", "negative"),
            median_value = stats::median(value)) |>
     dplyr::filter(value<4 & value>-4) |>
-    dplyr::ungroup()
+    dplyr::ungroup() |>
+    tibble::as_tibble()
 
   result <-  list()
   cc <- 1
@@ -727,41 +735,73 @@ gghm_gamma <- function(Hm,
 }
 
 #' plot trait covariate associations
+#' @import data.table
+#' @importFrom data.table :=
+#' @importFrom dtplyr lazy_dt
 #' @param Hm an Hmsc model object
 #' @param lut_varnames a named vector used to change the variable names
 #' @export
 gghm_gamma2 <- function(Hm,
                           lut_varnames = NA){
+  requireNamespace('dplyr')
+  requireNamespace('tidyr')
+  requireNamespace('tibble')
+  requireNamespace('ggplot2')
+  requireNamespace('dtplyr')
+  requireNamespace('data.table')
+  requireNamespace('ggnewscale')
+  requireNamespace('ggmcmc')
+  requireNamespace("stringr")
+
   c<-Hmsc::convertToCodaObject(Hm)
   mbc <- ggmcmc::ggs(c$Gamma) |>
-    tidyr::separate(.,
+    dtplyr::lazy_dt() |>
+    tidyr::separate(
              col = "Parameter",
              into = c("var", "x1", "trait", "x2"),
              sep = " ") |>
     dplyr::select(-x1, -x2) |>
     dplyr::mutate(var = stringr::str_remove_all(var, "G\\["),
-           trait = stringr::str_remove_all(trait, "yes"),
-           trait = stringr::str_remove_all(trait, "cots"),
-           trait = stringr::str_replace_all(trait, "originN", "native"),
-           trait = stringr::str_to_title(trait))|>
-    dplyr::filter(var != "(Intercept)", trait != "(Intercept)")
+                  var = stringr::str_remove_all(var,
+                                                " \\(C\\d+\\)"),
+                  trait = stringr::str_remove_all(trait,
+                                               " \\(T\\d+\\)\\]")
+                  )|>
+    dplyr::filter(var != "(Intercept)", trait != "(Intercept)")|>
+    dplyr::group_by(var, trait, Chain) |>
+    dplyr::mutate(value = scale(value,center = F),
+                  sign = ifelse(value>0, "positive", "negative"),
+                  median_value = stats::median(value)) |>
+    dplyr::filter(value<4 & value>-4) |>
+    dplyr::ungroup() |>
+    tibble::as_tibble()
 
   if(!is.na(lut_varnames)){
     mbc <- dplyr::mutate(mbc, var = lut_varnames[var])
   }
 
   p <- ggplot2::ggplot(mbc,
-              ggplot2::aes(x=value, y = trait,
-                  fill=as.factor(Chain))) +
-    ggdist::stat_dist_interval(alpha=0.5) +
-    ggplot2::facet_wrap(~var, scales = "free_x", nrow=2,
-               ncol=ceiling(length(unique(mbc$var))/2)) +
+                       ggplot2::aes(x = value, y = var, group = as.factor(Chain))) +
+    ggdist::stat_slab(height = 2, lwd = 0.75,
+                      ggplot2::aes(fill = ggplot2::after_stat(x > 0),
+                                   # color = p_equiv,
+                                   alpha = exp(abs(median_value))
+                      )) +
+    ggplot2::facet_wrap(~trait, scales = "free_x", nrow = 1,
+                        ncol = length(unique(mbc$trait))) +
+    ggplot2::scale_alpha_continuous(range = c(0, 2 * (1/length(unique(mbc$Chain))))) +
     ggplot2::theme_classic() +
-    ggplot2::guides(fill="none")+
-    ggplot2::geom_vline(xintercept=0, col="black", lty=2) +
-    ggplot2::xlab("Effect on Occurrence Probability") +
-    ggplot2::ylab("Trait") +
-    ggplot2::theme(strip.text = ggtext::element_markdown())
+    ggplot2::guides(alpha = "none", fill = "none") +
+    ggplot2::geom_vline(xintercept = 0, col = "black", lty = 2) +
+    ggplot2::xlab("Scaled Effect on Occurrence Probability") +
+    ggplot2::ylab("Species or Species Group (% Prevalence)") +
+    ggplot2::theme(panel.spacing.x = ggplot2::unit(-1, "lines"),
+                   legend.text = ggplot2::element_text(size = 20),
+                   legend.position = 'bottom',
+                   legend.title = ggplot2::element_blank(),
+                   axis.text.x = ggplot2::element_blank(),
+                   axis.ticks.x = ggplot2::element_blank(),
+                   axis.text.y = ggplot2::element_text(size = 12))
   return(p)
 }
 
@@ -949,6 +989,9 @@ gghm_gradient_c <- function(Hm,
 }
 
 #' Plot beta posterior estimates using point bars
+#' @import data.table
+#' @importFrom data.table :=
+#' @importFrom dtplyr lazy_dt
 #' @param Hm an Hmsc model object
 #' @param lut_gensp a named vector of species names to change them
 #' @param included_variables a vector of environmental variable names to indicate which variables to include
@@ -967,10 +1010,13 @@ gghm_beta3 <- function(Hm,
                        top_x_species = NA,
                        lut_gensp = NA){
   requireNamespace('dplyr')
+  requireNamespace('dtplyr')
+  requireNamespace('data.table')
   requireNamespace('tidyr')
   requireNamespace('tibble')
   requireNamespace('ggplot2')
   requireNamespace('bayestestR')
+  requireNamespace('rlang')
   requireNamespace('ggnewscale')
   requireNamespace('ggmcmc')
   requireNamespace("stringr")
@@ -979,7 +1025,8 @@ gghm_beta3 <- function(Hm,
   cc <- Hmsc::convertToCodaObject(Hm)
   # add dtplyr
   mbc0 <- dplyr::ungroup(dplyr::filter(dplyr::mutate(dplyr::group_by(
-    dplyr::filter(dplyr::mutate(tidyr::separate(ggmcmc::ggs(cc$Beta),
+    dplyr::filter(dplyr::mutate(tidyr::separate(
+      dtplyr::lazy_dt(ggmcmc::ggs(cc$Beta)),
                                                 col = "Parameter",
                                                 into = c("var", "sp"), sep = ", "),
                                 var = stringr::str_remove_all(var, "B\\["),
@@ -991,7 +1038,8 @@ gghm_beta3 <- function(Hm,
     value = scale(value, center = F),
     sign = ifelse(value > 0, "positive", "negative"),
     median_value = stats::median(value)),
-    value < 4 & value > -4))
+    value < 4 & value > -4)) |>
+    tibble::as_tibble()
 
   if (any(!is.na(included_variables))) {
     mbc0 <- dplyr::filter(mbc0, var %in% included_variables)

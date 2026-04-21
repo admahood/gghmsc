@@ -13,6 +13,8 @@ Imports:
     bayestestR,
     coda,
     dplyr,
+    dtplyr,
+    data.table,
     Hmsc,
     ggcorrplot,
     ggdist,
