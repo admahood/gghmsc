@@ -793,8 +793,8 @@ gghm_gamma2 <- function(Hm,
     ggplot2::theme_classic() +
     ggplot2::guides(alpha = "none", fill = "none") +
     ggplot2::geom_vline(xintercept = 0, col = "black", lty = 2) +
-    ggplot2::xlab("Scaled Effect on Occurrence Probability") +
-    ggplot2::ylab("Species or Species Group (% Prevalence)") +
+    ggplot2::xlab("Scaled Effect on Traits") +
+    ggplot2::ylab("Environmental Covariates") +
     ggplot2::theme(panel.spacing.x = ggplot2::unit(-1, "lines"),
                    legend.text = ggplot2::element_text(size = 20),
                    legend.position = 'bottom',
