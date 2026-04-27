@@ -1,10 +1,11 @@
 Package: gghmsc
 Title: Make nice plots for working with Hmsc JSDMs
-Version: 0.5.5
+Version: 0.5.6
+Date: 2026-04-26
 Authors@R: 
-    person("Adam", "Mahood", , "admahood@gmail.com", role = c("aut", "cre"),
+    person("Adam", "Mahood", , "admahood@duck.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3791-9654"))
-Description: This package makes really nice-looking plots from the objects outputted by Hmsc.
+Description: This package makes nice-looking plots from the objects outputted by Hmsc.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -23,6 +24,7 @@ Imports:
     ggplot2,
     ggtext,
     ggpubr,
+    rlang,
     stringr,
     tibble,
     tidyr,

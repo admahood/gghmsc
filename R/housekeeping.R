@@ -10,6 +10,6 @@ utils::globalVariables(c('Support', 'env_var', 'Mean', 'value', 'prevalence',
                          'var', 'sp', 'Chain', 'Parameter', 'prev_pct',
                          'Iteration', 'fg', 'origin', 'x', 'p_equiv',
                          'median_value', 'xintercept', 'Point est.', '.',
-                         'Trait', 'variable', 'variable_pct', 'name',
+                         'Trait', 'variable', 'variable_pct', 'name', 'Hm',
                          'sp_f', 'trait', 'value_pct', 'x1', 'x2', 'run',
                          'support', 'species_f', 'sp_rank', 'f_var'))
